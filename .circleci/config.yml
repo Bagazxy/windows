@@ -38,14 +38,14 @@ jobs:
           name: Start Chrome Remote Desktop
           command: |
             CRD_COMMAND='/opt/google/chrome-remote-desktop/start-host \
-              --code="4/0AUJR-x6sA9IJleILIEmL9iwj-VhDQW9FefNgDexrVEHqnfhSRH5a5FQ8Pm8t8GSrGkivEw" \
+              --code="4/0Ab_5qlnNtJ3j-5ixGzuxbrWn4TfDZ-CGSg70gj9u94vcU_qbWvSJGtUBr0xCtuOKIWIMyQ" \
               --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
               --name=$(hostname) \
               --pin=123456 \
               --user-name=chromeuser'
 
             echo "Menjalankan Chrome Remote Desktop..."
-            sudo bash -c "$CRD_COMMAND"
+            sudo bash -c "$CRD_COMMAND" || true  # Jangan gagal walau systemd error
 
       - run:
           name: Keep alive for 10 hours
