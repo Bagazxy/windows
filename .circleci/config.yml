@@ -40,8 +40,7 @@ jobs:
               echo "Menjalankan Chrome Remote Desktop sebagai non-root..."
               sudo bash -c "$CRD_COMMAND"
               echo "Remote Desktop aktif."
-EOF
-
+              
       - run:
           name: Keep alive for 10 hours
           command: sleep 36000
