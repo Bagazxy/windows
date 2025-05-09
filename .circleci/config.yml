@@ -6,23 +6,27 @@ jobs:
       - image: cimg/base:stable
     steps:
       - run:
-          name: Create Non-root User
+          name: Install dependencies
+          command: |
+            sudo apt update
+            sudo DEBIAN_FRONTEND=noninteractive apt install -y \
+              wget curl unzip xvfb x11-utils gnupg2 \
+              software-properties-common xfce4 desktop-base xscreensaver
+
+      - run:
+          name: Create non-root user
           command: |
             sudo useradd -m chromeuser
             sudo usermod -aG sudo chromeuser
             echo 'chromeuser ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/chromeuser
+            sudo usermod -aG chrome-remote-desktop chromeuser
+            echo "exec /usr/bin/xfce4-session" | sudo tee /home/chromeuser/.chrome-remote-desktop-session
+            sudo chown chromeuser:chromeuser /home/chromeuser/.chrome-remote-desktop-session
 
       - run:
-          name: Install dependencies as root
+          name: Install Chrome and CRD as non-root
           command: |
-            sudo apt update
-            sudo apt install -y wget curl unzip xvfb x11-utils gnupg2 software-properties-common
-
-      - run:
-          name: Switch to non-root user and setup
-          command: |
-            sudo -u chromeuser bash <<'EOF'
-              set -e
+            sudo -u chromeuser bash -c '
               cd ~
               wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
               sudo dpkg -i google-chrome*.deb || sudo apt --fix-broken install -y
@@ -31,16 +35,19 @@ jobs:
               wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
               sudo dpkg -i chrome-remote-desktop*.deb || sudo apt --fix-broken install -y
               rm chrome-remote-desktop*.deb
+            '
 
-              CRD_COMMAND='/opt/google/chrome-remote-desktop/start-host \
-                --code="4/0AUJR-x6fUNmiXelN8q-RxUklCk1GsFfxUa3HPBcUoQqgDI4MGiZ6LaNywU7WhjjYf3aV9Q" \
+      - run:
+          name: Start CRD as chromeuser
+          command: |
+            sudo -u chromeuser bash -c '
+              /opt/google/chrome-remote-desktop/start-host \
+                --code="4/0Ab_5qlmTchGnH3CuSdbI7COKFyiTlB-Ld1MVpOAay7tajacl40YaTLOgiZHSHFd_WjaiTA" \
                 --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
-                --name=$(hostname) --pin=123456'
+                --name=$(hostname) \
+                --pin=123456
+            '
 
-              echo "Menjalankan Chrome Remote Desktop sebagai non-root..."
-              sudo bash -c "$CRD_COMMAND"
-              echo "Remote Desktop aktif."
-              
       - run:
           name: Keep alive for 10 hours
           command: sleep 36000
