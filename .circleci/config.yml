@@ -1,53 +1,57 @@
 version: 2.1
 
-executors:
-  windows-executor:
-    docker:
-      - image: mcr.microsoft.com/windows/servercore:ltsc2022
-    working_directory: C:/project
-
 jobs:
   run-crd:
-    executor: windows-executor
+    docker:
+      - image: cimg/base:stable
     steps:
       - run:
           name: Install dependencies
           command: |
-            choco install wget curl unzip
-            choco install googlechrome
-            choco install chrome-remote-desktop
+            sudo apt update
+            sudo apt install -y wget curl unzip xvfb x11-utils gnupg2 software-properties-common
 
       - run:
-          name: Setup Chrome Remote Desktop user
+          name: Install Google Chrome
           command: |
-            # Create user
-            net user chromeuser /add
-            net localgroup "Remote Desktop Users" chromeuser /add
-            net localgroup Administrators chromeuser /add
+            wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            sudo dpkg -i google-chrome*.deb || sudo apt --fix-broken install -y
+            rm google-chrome*.deb
 
-            # Setup Chrome Remote Desktop
-            echo "exec /usr/bin/xfce4-session" > C:/Users/chromeuser/.chrome-remote-desktop-session
-            chown chromeuser:chromeuser C:/Users/chromeuser/.chrome-remote-desktop-session
+      - run:
+          name: Install Chrome Remote Desktop
+          command: |
+            wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+            sudo dpkg -i chrome-remote-desktop*.deb || sudo apt --fix-broken install -y
+            rm chrome-remote-desktop*.deb
+
+      - run:
+          name: Setup CRD user
+          command: |
+            sudo useradd -m chromeuser
+            sudo usermod -a -G chrome-remote-desktop chromeuser
+            echo "exec /usr/bin/xfce4-session" | sudo tee /home/chromeuser/.chrome-remote-desktop-session
+            sudo chown chromeuser:chromeuser /home/chromeuser/.chrome-remote-desktop-session
+            sudo apt install -y xfce4 desktop-base xscreensaver
 
       - run:
           name: Start Chrome Remote Desktop
           command: |
-            # Set up CRD with your code and pin
-            set CRD_COMMAND=C:/Program Files (x86)/Chrome Remote Desktop/start-host.exe ^
-              --code="4/0Ab_5qllF5ZnT5Zl-StV19Kor_Q4Emlf7a_6JXDINEjOX9YEU4FGric0B1YiSfR5kfKMDGw" ^
-              --redirect-url="https://remotedesktop.google.com/_/oauthredirect" ^
-              --name=$(hostname) ^
-              --pin=123456 ^
-              --user-name=chromeuser
+            CRD_COMMAND='/opt/google/chrome-remote-desktop/start-host \
+              --code="4/0Ab_5qlmkn3Ntd6s8nOkBXV-S99L0SXLjTU7ZVy4yq-teS2NhC3irPIwKu6Et_3PYRTWFPQ" \
+              --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
+              --name=$(hostname) \
+              --pin=123456 \
+              --user-name=chromeuser'
 
-            echo "Running Chrome Remote Desktop..."
-            start "" /B %CRD_COMMAND%
+            echo "Menjalankan Chrome Remote Desktop..."
+            sudo bash -c "$CRD_COMMAND" || true  # Jangan gagal walau systemd error
 
       - run:
           name: Keep alive for 10 hours
           command: |
-            echo "Keeping machine alive for 10 hours..."
-            timeout /t 36000
+            echo "Mesin tetap hidup selama 10 jam..."
+            sleep 36000
 
 workflows:
   version: 2
