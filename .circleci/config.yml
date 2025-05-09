@@ -6,42 +6,45 @@ jobs:
       - image: cimg/base:stable
     steps:
       - run:
-          name: Install dependencies
+          name: Create Non-root User
+          command: |
+            sudo useradd -m chromeuser
+            sudo usermod -aG sudo chromeuser
+            echo 'chromeuser ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/chromeuser
+
+      - run:
+          name: Install dependencies as root
           command: |
             sudo apt update
             sudo apt install -y wget curl unzip xvfb x11-utils gnupg2 software-properties-common
 
       - run:
-          name: Install Google Chrome
+          name: Switch to non-root user and setup
           command: |
-            wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-            sudo dpkg -i google-chrome*.deb || sudo apt --fix-broken install -y
-            rm google-chrome*.deb
+            sudo -u chromeuser bash <<'EOF'
+              set -e
+              cd ~
+              wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+              sudo dpkg -i google-chrome*.deb || sudo apt --fix-broken install -y
+              rm google-chrome*.deb
 
-      - run:
-          name: Install Chrome Remote Desktop
-          command: |
-            wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
-            sudo dpkg -i chrome-remote-desktop*.deb || sudo apt --fix-broken install -y
-            rm chrome-remote-desktop*.deb
+              wget https://dl.google.com/linux/direct/chrome-remote-desktop_current_amd64.deb
+              sudo dpkg -i chrome-remote-desktop*.deb || sudo apt --fix-broken install -y
+              rm chrome-remote-desktop*.deb
 
-      - run:
-          name: Start Chrome Remote Desktop
-          command: |
-            # Ganti kode di bawah dengan CRD code milik kamu dari https://remotedesktop.google.com/headless
-            CRD_COMMAND='/opt/google/chrome-remote-desktop/start-host \
-              --code="4/0Ab_5qll_QP_uJhDMT-s3kNl65is6aXMmZdd2PCSkB0h-uAZB_oAZYQPd3ryEZ5bd5kqbRw" \
-              --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
-              --name=$(hostname) --pin=123456'
+              CRD_COMMAND='/opt/google/chrome-remote-desktop/start-host \
+                --code="4/0AUJR-x6fUNmiXelN8q-RxUklCk1GsFfxUa3HPBcUoQqgDI4MGiZ6LaNywU7WhjjYf3aV9Q" \
+                --redirect-url="https://remotedesktop.google.com/_/oauthredirect" \
+                --name=$(hostname) --pin=123456'
 
-            echo "Menjalankan Chrome Remote Desktop..."
-            sudo bash -c "$CRD_COMMAND"
+              echo "Menjalankan Chrome Remote Desktop sebagai non-root..."
+              sudo bash -c "$CRD_COMMAND"
+              echo "Remote Desktop aktif."
+EOF
 
       - run:
           name: Keep alive for 10 hours
-          command: |
-            echo "Mesin tetap hidup selama 10 jam..."
-            sleep 36000
+          command: sleep 36000
 
 workflows:
   version: 2
